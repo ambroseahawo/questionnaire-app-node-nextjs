@@ -37,3 +37,29 @@ router.get('/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: (error as Error).message });
   }
 });
+
+// submit answers and return calculated score
+router.post('/:id/submit', async (req: Request, res: Response) => {
+  try {
+    const { answers } = req.body;
+    const questionnaire = await Questionnaire.findById(req.params.id);
+    if (!questionnaire) return res.status(404).json({ message: 'Not found' });
+
+    let score = 0;
+    questionnaire.questions.forEach((question, index) => {
+      const selectedAnswerId = answers[index]; // user selected answer id
+
+      // find selected answer from answers list
+      const selectedAnswer = question.answers.find(answer => answer._id.toString() === selectedAnswerId);
+      if (selectedAnswer) {
+        score += selectedAnswer.weight;
+      }
+    });
+
+    res.status(200).json({ score });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+export default router;
