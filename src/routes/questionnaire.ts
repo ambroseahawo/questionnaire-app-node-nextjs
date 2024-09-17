@@ -26,3 +26,14 @@ router.get('/all', async (req: Request, res: Response) => {
     res.status(500).json({ error: (error as Error).message });
   }
 });
+
+// get questionnaire by ID
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const questionnaire = await Questionnaire.findById(req.params.id);
+    if (!questionnaire) return res.status(404).json({ message: 'Not found' });
+    res.status(200).json(questionnaire);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
