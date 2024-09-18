@@ -1,101 +1,204 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import QuestionnaireModal from '@/components/Modal';
+import Navbar from '@/components/Navbar';
+import Spinner from '@/components/Spinner';
+import Toast from '@/components/Toast'; // Toast component
+import { Questionnaire } from '@/types/questionnaire';
+import { createQuestionnaire, deleteQuestionnaire, getQuestionnaires, updateQuestionnaire } from '@/utils/api';
+import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+
+const HomePage: React.FC = () => {
+  const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
+  const [modalState, setModalState] = useState<{ isOpen: boolean; mode: 'create' | 'edit'; questionnaire?: Questionnaire }>({
+    isOpen: false,
+    mode: 'create',
+  });
+  const [loading, setLoading] = useState<boolean>(true);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null); // Toast state
+  const router = useRouter();
+
+  const defaultQuestionnaire: Questionnaire = {
+    _id: '',
+    title: '',
+    questions: [
+      {
+        _id: '',
+        question: '',
+        answers: [
+          { _id: '', text: '', weight: 0, isCorrect: false },
+          { _id: '', text: '', weight: 0, isCorrect: false },
+          { _id: '', text: '', weight: 0, isCorrect: false },
+        ],
+      },
+    ],
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getQuestionnaires();
+        setQuestionnaires(data);
+      } catch (error) {
+        console.error('Error fetching questionnaires:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleModalOpen = (mode: 'create' | 'edit', questionnaire?: Questionnaire) => {
+    if (mode === 'create') {
+      setModalState({ isOpen: true, mode, questionnaire: defaultQuestionnaire });
+    } else {
+      setModalState({ isOpen: true, mode, questionnaire });
+    }
+  };
+
+  const handleModalClose = () => {
+    setModalState({ isOpen: false, mode: 'create' });
+  };
+
+  const handleSave = async (questionnaire: Questionnaire) => {
+    console.log(questionnaire);
+    try {
+      if (modalState.mode === 'create') {
+        // Clean up the questionnaire object for creation
+        const cleanedQuestionnaire = {
+          title: questionnaire.title,
+          questions: questionnaire.questions.map((q) => ({
+            question: q.question,
+            answers: q.answers.map((a) => ({
+              text: a.text,
+              weight: a.weight,
+              isCorrect: a.isCorrect,
+            })),
+          })),
+        };
+
+        const createdQuestionnaire = await createQuestionnaire(cleanedQuestionnaire);
+        setQuestionnaires((prev) => [createdQuestionnaire, ...prev]); // Add new questionnaire to the list
+        setToast({ message: 'Questionnaire created successfully!', type: 'success' });
+      } else if (modalState.mode === 'edit') {
+        // Clean up the questionnaire object for update
+        const cleanedQuestionnaire = {
+          title: questionnaire.title,
+          questions: questionnaire.questions.map((q) => ({
+            _id: q._id, // Include _id for existing questions
+            question: q.question,
+            answers: q.answers.map((a) => ({
+              _id: a._id, // Include _id for existing answers
+              text: a.text,
+              weight: a.weight,
+              isCorrect: a.isCorrect,
+            })),
+          })),
+        };
+
+        const updatedQuestionnaire = await updateQuestionnaire(questionnaire._id, cleanedQuestionnaire);
+        setQuestionnaires((prev) => prev.map((q) => (q._id === updatedQuestionnaire._id ? updatedQuestionnaire : q)));
+        setToast({ message: 'Questionnaire updated successfully!', type: 'success' });
+      }
+    } catch (error) {
+      setToast({ message: 'Failed to save questionnaire', type: 'error' });
+    } finally {
+      handleModalClose();
+    }
+  };
+
+
+
+  const handleQuestionnaireClick = (id: string) => {
+    router.push(`/questionnaires/${id}`);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteQuestionnaire(id);
+      setQuestionnaires((prev) => prev.filter((q) => q._id !== id));
+      setToast({ message: 'Questionnaire deleted successfully!', type: 'success' });
+    } catch (error) {
+      setToast({ message: 'Failed to delete questionnaire', type: 'error' });
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+    <div>
+      <Navbar />
+      <main className="pt-16 p-4">
+        {modalState.isOpen && (
+          <QuestionnaireModal
+            isOpen={modalState.isOpen}
+            onClose={handleModalClose}
+            questionnaire={modalState.questionnaire}
+            onSave={handleSave}
+          />
+        )}
+        <button
+          onClick={() => handleModalOpen('create')}
+          className="bg-blue-500 text-white py-2 px-4 rounded mb-4 text-sm md:text-base"
+        >
+          Create
+        </button>
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <Spinner />
+          </div>
+        ) : questionnaires.length === 0 ? (
+          <p>No questionnaires available</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border-b text-left">Title</th>
+                  <th className="py-2 px-4 border-b text-left text-center hidden sm:table-cell">Questions</th>
+                  <th className="py-2 px-4 border-b text-left text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {questionnaires.map((q) => (
+                  <tr key={q._id} className="border-b">
+                    <td className="py-2 px-4">
+                      <a
+                        href={`/questionnaires/${q._id}`}
+                        className="text-blue-600 underline cursor-pointer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleQuestionnaireClick(q._id);
+                        }}
+                      >
+                        {q.title}
+                      </a>
+                    </td>
+                    <td className="py-2 px-4 text-center hidden sm:table-cell">{q.questions.length}</td>
+                    <td className="py-2 px-4 flex space-x-2 justify-end">
+                      <button
+                        onClick={() => handleModalOpen('edit', q)}
+                        className="text-yellow-500 hover:text-yellow-600"
+                      >
+                        <i className="fas fa-edit"></i>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(q._id)}
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
-}
+};
+
+export default HomePage;
