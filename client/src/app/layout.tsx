@@ -1,3 +1,4 @@
+import Navbar from '@/components/Navbar';
 import type { Metadata } from "next";
 import './globals.css';
 
@@ -13,6 +14,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <html lang="en">
       <body className="bg-gray-100">
+        <Navbar />
         <main className="container mx-auto pt-16">
           {children}
         </main>

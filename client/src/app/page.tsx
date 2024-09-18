@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
 import QuestionnaireModal from '@/components/Modal';
 import Navbar from '@/components/Navbar';
 import Spinner from '@/components/Spinner';
-import Toast from '@/components/Toast'; // Toast component
+import Toast from '@/components/Toast';
 import { Questionnaire } from '@/types/questionnaire';
 import { createQuestionnaire, deleteQuestionnaire, getQuestionnaires, updateQuestionnaire } from '@/utils/api';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,7 @@ const HomePage: React.FC = () => {
     mode: 'create',
   });
   const [loading, setLoading] = useState<boolean>(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null); // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
 
   const defaultQuestionnaire: Questionnaire = {
@@ -39,9 +39,11 @@ const HomePage: React.FC = () => {
     const fetchData = async () => {
       try {
         const data = await getQuestionnaires();
+        console.log(data)
         setQuestionnaires(data);
       } catch (error) {
         console.error('Error fetching questionnaires:', error);
+        setToast({ message: 'Failed to fetch questionnaires', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -63,10 +65,10 @@ const HomePage: React.FC = () => {
   };
 
   const handleSave = async (questionnaire: Questionnaire) => {
-    console.log(questionnaire);
     try {
+      let response: Questionnaire;
+
       if (modalState.mode === 'create') {
-        // Clean up the questionnaire object for creation
         const cleanedQuestionnaire = {
           title: questionnaire.title,
           questions: questionnaire.questions.map((q) => ({
@@ -79,18 +81,17 @@ const HomePage: React.FC = () => {
           })),
         };
 
-        const createdQuestionnaire = await createQuestionnaire(cleanedQuestionnaire);
-        setQuestionnaires((prev) => [createdQuestionnaire, ...prev]); // Add new questionnaire to the list
+        response = await createQuestionnaire(cleanedQuestionnaire);
+        setQuestionnaires((prev) => [response, ...prev]);
         setToast({ message: 'Questionnaire created successfully!', type: 'success' });
       } else if (modalState.mode === 'edit') {
-        // Clean up the questionnaire object for update
         const cleanedQuestionnaire = {
           title: questionnaire.title,
           questions: questionnaire.questions.map((q) => ({
-            _id: q._id, // Include _id for existing questions
+            _id: q._id,
             question: q.question,
             answers: q.answers.map((a) => ({
-              _id: a._id, // Include _id for existing answers
+              _id: a._id,
               text: a.text,
               weight: a.weight,
               isCorrect: a.isCorrect,
@@ -98,18 +99,17 @@ const HomePage: React.FC = () => {
           })),
         };
 
-        const updatedQuestionnaire = await updateQuestionnaire(questionnaire._id, cleanedQuestionnaire);
-        setQuestionnaires((prev) => prev.map((q) => (q._id === updatedQuestionnaire._id ? updatedQuestionnaire : q)));
+        response = await updateQuestionnaire(questionnaire._id, cleanedQuestionnaire);
+        setQuestionnaires((prev) => prev.map((q) => (q._id === response._id ? response : q)));
         setToast({ message: 'Questionnaire updated successfully!', type: 'success' });
       }
-    } catch (error) {
-      setToast({ message: 'Failed to save questionnaire', type: 'error' });
-    } finally {
+
       handleModalClose();
+    } catch (error) {
+      console.log((error as Error)?.message);
+      setToast({ message: (error as Error)?.message || 'Failed to save questionnaire', type: 'error' });
     }
   };
-
-
 
   const handleQuestionnaireClick = (id: string) => {
     router.push(`/questionnaires/${id}`);
@@ -121,7 +121,7 @@ const HomePage: React.FC = () => {
       setQuestionnaires((prev) => prev.filter((q) => q._id !== id));
       setToast({ message: 'Questionnaire deleted successfully!', type: 'success' });
     } catch (error) {
-      setToast({ message: 'Failed to delete questionnaire', type: 'error' });
+      setToast({ message: (error as Error)?.message || 'Failed to delete questionnaire', type: 'error' });
     }
   };
 
