@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
+    "noImplicitAny": true,
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,6 +20,7 @@
     ],
     "paths": {
       "@/components/*": ["./src/components/*"],
+      "@/types/*": ["./src/types/*"],
       "@/pages/*": ["./src/pages/*"],
       "@/utils/*": ["./src/utils/*"],
       "@/styles/*": ["./src/styles/*"]
